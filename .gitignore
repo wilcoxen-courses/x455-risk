@@ -1,35 +1,18 @@
-# Python
-
-*.py[cod]
-__pycache__
-
-# Shapefiles
-*.cpg
-*.dbf
-*.prj
-*.sh[px]
-
-# OS files
+pub/
+ref/
+__pycache__/
 *~
 *.bak
-*.swp
-._*
+*.py[cod]
 .DS_Store
-.DS_Store?
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
+**/.DS_Store
+.pgw
 
-# Other
-.Rhistory
-.Rdata
-*.pgw
-makefile
-
-# Data
-*.gpkg
+*.db
 *.pkl
+*.tif
 *.zip
-*.csv
+*.xml
+*.gpkg
+
+!cb_2024_36_bg_500k.zip

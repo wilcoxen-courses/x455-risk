@@ -1,0 +1,45 @@
+#  Setup information for PM risk assessment example
+
+#
+#  Mortality CRF hazard ratio used by EPA per 10 ug/m3
+#
+
+hazard_ratio = 1.06
+
+#
+#  Value of a statistical life (EPA, $2024)
+#
+
+vsl = 11e6
+
+#
+#  Years to evaluate
+#
+
+[air_data]
+2009 = 'aa01_pm300m-2009.tif'
+2024 = 'aa16_pm300m-2024.tif'
+
+#
+#  Race codes and Census categories
+#
+
+[census_races]
+AIAN  = 'American Indian and Alaska Native alone'
+A     = 'Asian alone'
+BAA   = 'Black or African American alone'
+NHOPI = 'Native Hawaiian and Other Pacific Islander alone'
+W     = 'White alone'
+TOM   = 'Two or more races'
+OTH   = 'Some other race alone'
+
+#
+#  County FIPS codes for NYC
+#
+
+[counties]
+005 = 'Bronx'
+047 = 'Kings'
+061 = 'New York'
+081 = 'Queens'
+085 = 'Richmond'
