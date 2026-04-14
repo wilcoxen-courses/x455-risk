@@ -21,6 +21,11 @@ plt.rcParams['figure.dpi'] = 300
 #
 #  Input files
 #
+#    setup file = key settings and parameters
+#    bg file    = boundaries of block groups
+#    pop data   = population data from the Census
+#    risk file  = baseline risk from the CDC
+#
 
 setup_file = 'setup.toml'
 bg_file = 'cb_2024_36_bg_500k.zip'
@@ -39,7 +44,9 @@ with open(setup_file,'rb') as fh:
     vsl = setup['vsl']
 
 #
-#  Read the block group shape file and filter to NYC
+#  Read the block group shape file and filter to NYC.
+#  Reset the index to sequential integers to facilitate
+#  joining on zonal statistics later.
 #
 
 bgs = gpd.read_file(bg_file)
@@ -49,7 +56,7 @@ bgs = bgs.reset_index(drop=True)
 #%%
 #
 #  Walk through the air quality data files and compute
-#  block group statistics for each one.
+#  block group zonal statistics for each one.
 #
 
 bgdata = {}
@@ -133,7 +140,8 @@ bgs_all.index = bgs_all.index.set_names('year',level=0)
 
 #%%
 #
-#  Draw histograms of the before and after concentrations
+#  Draw histograms of the before and after concentrations to
+#  see if there's much difference.
 #
 
 fig,ax = plt.subplots()
@@ -175,6 +183,7 @@ ax.annotate('2024=2009',
 
 fig.tight_layout()
 
+#%%
 #
 #  Map the changes
 #
@@ -217,7 +226,8 @@ print(bg_risk_baseline.mean())
 #
 #  Now calculate the rate for a 10 ug/m3 increase, which
 #  is the change used to define the CRF beta. Will be the
-#  same across block groups.
+#  same across block groups. Will differ across races since
+#  the baseline risks differed.
 #
 
 bg_risk_10ug = bg_risk_baseline * crf_hr
@@ -235,10 +245,12 @@ bg_excess_10ug = bg_risk_10ug - bg_risk_baseline
 #
 #  Now calculate excess risk for actual changes in PM by
 #  block group. Concentration data is ug/m3 so divide by
-#  ten before multiplying
+#  ten before multiplying. Result will differ by race and
+#  block group.
 #
 
 pm_change = byyear['change']
+
 bg_excess_act = bg_excess_10ug.mul( pm_change/10, axis='index' )
 
 #
@@ -246,6 +258,7 @@ bg_excess_act = bg_excess_10ug.mul( pm_change/10, axis='index' )
 #
 
 stack = bg_excess_act.melt(var_name='Race',value_name='Risk')
+
 stack['Risk'] = stack['Risk']*100e3
 
 fig,ax = plt.subplots()
@@ -254,18 +267,37 @@ sns.histplot(stack,x='Risk',hue='Race',ax=ax)
 fig.tight_layout()
 
 #%%
+#
+#  Now get the population, drop "OTH" which is small and
+#  doesn't have a baseline risk, and set the index to the
+#  block group's GEOID
+#
 
 pop = pd.read_csv(pop_data,dtype={'GEOID':str})
 pop = pop.drop(columns='OTH')
 pop = pop.set_index('GEOID')
 
+#
+#  Calculate the excess mortality by multiplying the excess
+#  risk by block group by the block group's population.
+#
+
 excess_mort = bg_excess_act*pop
 excess_mort['Total'] = excess_mort.sum(axis='columns')
+
+#
+#  Total excess mortality by race if we went back to 2009,
+#  or the expected lives saved by the reduction in pollution.
+#
 
 excess_mort_by_race = excess_mort.sum()
 
 print('\nExcess fatalites by race:')
 print(excess_mort_by_race.round(2))
+
+#
+#  Benefits valued at the VSL
+#
 
 tot_excess = excess_mort_by_race['Total']
 tot_cost_m = tot_excess*vsl/1e6
@@ -274,6 +306,9 @@ print('\nTotal cost:')
 print(f'{round(tot_cost_m,2):,} M')
 
 #%%
+#
+#  Map excess mortality by block group for all races
+#
 
 merged = bgs.set_index('GEOID')[['geometry']]
 merged = merged.join(excess_mort)
@@ -284,6 +319,13 @@ merged.plot('Total',legend=True,ax=ax)
 ax.axis('off')
 
 #%%
+#
+#  Summarize fatalities avoided by race with the racial
+#  composition of the city. Compute shares in total
+#  fatalities avoided and compare that with shares in
+#  in the total population and the population-weighted
+#  change in air quality.
+#
 
 excess_mort_pct = 100*excess_mort_by_race/tot_excess
 
@@ -299,7 +341,7 @@ print(weighted_change.round(2))
 
 summary = pd.DataFrame()
 summary['% pop'] = pop_pct
-summary['% excess'] = excess_mort_pct
+summary['% avoided'] = excess_mort_pct
 summary['PM chg'] = weighted_change
 summary['Base/100k'] = 100e3*by_race_risk
 summary['RR/100k'] = 100e3*excess_mort_by_race/pop.sum()
@@ -307,4 +349,3 @@ summary = summary.round(2)
 
 print('\nOverall Impacts by Race:')
 print(summary)
-
