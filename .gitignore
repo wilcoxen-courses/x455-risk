@@ -10,9 +10,7 @@ __pycache__/
 
 *.db
 *.pkl
-*.tif
 *.zip
-*.xml
 *.gpkg
 
 !cb_2024_36_bg_500k.zip
